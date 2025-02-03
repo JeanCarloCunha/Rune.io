@@ -1,0 +1,2103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle RPG</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+        .menu {
+            margin: 20px;
+        }
+        .menu button {
+            display: block;
+            margin: 10px 0;
+        }
+        #modal, #item-modal, #delete-modal, #battle-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #modal-content, #item-modal-content, #delete-modal-content, #battle-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+        }
+        .inventory-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .inventory-item img {
+            width: 50px;
+            height: 50px;
+        }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #profile-info {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        #profile-info span {
+            margin: 0 10px;
+        }
+        #health-bar {
+            width: 200px;
+            height: 20px;
+            border: 1px solid #000;
+            position: relative;
+        }
+        #health-bar-inner {
+            height: 100%;
+            background-color: red;
+            position: relative;
+        }
+        #health-bar-inner span {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            color: white;
+        }
+        #purchase-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #purchase-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #purchase-details {
+            margin-top: 10px;
+        }
+        #venda-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #venda-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+				#fishing-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: none;
+}
+
+#fishing-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+#mining-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: none;
+}
+#mining-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+#discard-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: none;
+}
+#discard-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    max-height: 80%;
+    overflow-y: auto;
+}
+.inventory-item.selected {
+    border: 2px solid red;
+}
+    </style>
+</head>
+<body>
+    <div id="profile-info" style="display: flex;">
+    <span id="profile-name"></span>
+    <span>Ouro: <span id="gold-amount">0</span></span>
+    <span>Banco: <span id="bank-gold-amount">0</span></span>
+    <span>Inventário: <span id="inventory-capacity">0/0</span></span> <!-- Novo elemento para a capacidade do inventário -->
+    <div id="health-bar">
+        <div id="health-bar-inner">
+            <span id="health-text">100/100</span>
+        </div>
+    </div>
+</div>
+    <div id="cheese-status" style="display: none;">
+        <img src="path-to-cheese-icon.png" alt="Cheese Status" title="Alimentado 300 segundos" id="cheese-status-icon"/>
+    </div>
+</div>
+
+    <!-- Página Inicial -->
+    <div id="page-initial" class="menu">
+        <button onclick="showMenu('menu-create-profile')">Criar novo perfil</button>
+        <button onclick="showMenu('menu-login')">Entrar</button>
+    </div>
+
+    <!-- Criar Perfil -->
+    <div id="menu-create-profile" class="menu hidden">
+        <input type="text" id="new-profile-name" placeholder="Nome do perfil">
+        <button onclick="createProfile()">Criar Perfil</button>
+        <button onclick="showMenu('page-initial')">Voltar</button>
+    </div>
+
+    <!-- Login -->
+    <div id="menu-login" class="menu hidden">
+        <div id="profile-list"></div>
+        <button onclick="showMenu('page-initial')">Voltar</button>
+    </div>
+
+    <!-- Menu Principal -->
+    <div id="menu-principal" class="menu hidden">
+        <button onclick="showMenu('menu-comecar')">Começar</button>
+        <button onclick="showMenu('menu-inventario')">Inventário</button>
+        <button onclick="showMenu('menu-equipamentos')">Equipamentos</button>
+        <button onclick="showMenu('menu-banco')">Banco</button>
+        <button onclick="showMenu('menu-skills')">Skills</button>
+        <button onclick="showMenu('menu-loja')">Loja</button>
+        <button onclick="showMenu('menu-meus-status')">Meus Status</button>
+				<button onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Submenus -->
+    <div id="menu-comecar" class="menu hidden">
+        <button onclick="showMenu('menu-batalhas')">Batalhas</button>
+        <button onclick="showMenu('menu-pesca')">Pesca</button>
+        <button onclick="showMenu('menu-mineracao')">Mineração</button>
+        <button onclick="showMenu('menu-forja')">Forja</button>
+        <button onclick="showMenu('menu-principal')">Voltar</button>
+    </div>
+
+    <div id="menu-batalhas" class="menu hidden">
+        <button onclick="showCreature('rato', 30, 0, 3)">Rato</button>
+        <button onclick="showCreature('morcego', 60, 0, 4)">Morcego</button>
+        <button onclick="showCreature('aranha', 70, 0, 5)">Aranha</button>
+        <button onclick="showCreature('troll', 100, 0, 7)">Troll</button>
+        <button onclick="showCreature('orc', 120, 0, 9)">Orc</button>
+        <button onclick="showCreature('minotauro', 150, 0, 10)">Minotauro</button>
+        <button onclick="showMenu('menu-comecar')">Voltar</button>
+    </div>
+
+    <div id="menu-pesca" class="menu hidden">
+    <button onclick="showFishingModal(fishes.lambari)">Lambari</button>
+    <button onclick="showFishingModal(fishes.bagre)">Bagre</button>
+    <button onclick="showFishingModal(fishes.truta)">Truta</button>
+    <button onclick="showFishingModal(fishes.lagosta)">Lagosta</button>
+    <button onclick="showFishingModal(fishes.salmao)">Salmão</button>
+    <button onclick="showFishingModal(fishes.peixeEspada)">Peixe Espada</button>
+    <button onclick="showFishingModal(fishes.tubarao)">Tubarão</button>
+    <button onclick="showMenu('menu-comecar')">Voltar</button>
+</div>
+
+<div id="menu-mineracao" class="menu hidden">
+    <button onclick="showMiningModal(minerals.veioDeCobre)">Veio de Cobre</button>
+    <button onclick="showMiningModal(minerals.veioDeLatao)">Veio de Latão</button>
+    <button onclick="showMiningModal(minerals.veioDeCobalto)">Veio de Cobalto</button>
+    <button onclick="showMiningModal(minerals.veioDeFerro)">Veio de Ferro</button>
+    <button onclick="showMiningModal(minerals.veioDePrata)">Veio de Prata</button>
+    <button onclick="showMiningModal(minerals.veioDeCarvao)">Veio de Carvão</button>
+    <button onclick="showMiningModal(minerals.veioDeOuro)">Veio de Ouro</button>
+    <button onclick="showMiningModal(minerals.veioDeGranito)">Veio de Granito</button>
+    <button onclick="showMiningModal(minerals.veioDeMithril)">Veio de Mithril</button>
+    <button onclick="showMiningModal(minerals.veioDeLunarita)">Veio de Lunarita</button>
+    <button onclick="showMiningModal(minerals.veioDeAdamantita)">Veio de Adamantita</button>
+    <button onclick="showMiningModal(minerals.veioDeRunita)">Veio de Runita</button>
+    <button onclick="showMiningModal(minerals.veioDeSolarita)">Veio de Solarita</button>
+    <button onclick="showMenu('menu-comecar')">Voltar</button>
+</div>
+
+    <div id="menu-forja" class="menu hidden">
+        <button onclick="showMenu('menu-lingote-cobre')">Lingote de cobre</button>
+        <button onclick="showMenu('menu-lingote-bronze')">Lingote de bronze</button>
+        <button onclick="showMenu('menu-lingote-ferro')">Lingote de ferro</button>
+        <button onclick="showMenu('menu-lingote-adamantium')">Lingote de adamantium</button>
+        <button onclick="showMenu('menu-comecar')">Voltar</button>
+    </div>
+
+    <div id="menu-skills" class="menu hidden">
+    <div>
+        <p>Ataque: Nível <span id="ataque-level">0</span>, Experiência <span id="ataque-exp">0</span>/<span id="ataque-exp-next">100</span></p>
+    </div>
+    <div>
+        <p>Defesa: Nível <span id="defesa-level">0</span>, Experiência <span id="defesa-exp">0</span>/<span id="defesa-exp-next">100</span></p>
+    </div>
+		<div>
+    <p>Pesca: Nível <span id="pesca-level">0</span>, Experiência <span id="pesca-exp">0</span>/<span id="pesca-exp-next">100</span></p>
+</div>
+<div>
+    <p>Mineração: Nível <span id="mineracao-level">0</span>, Experiência <span id="mineracao-exp">0</span>/<span id="mineracao-exp-next">100</span></p>
+</div>
+    <button onclick="showMenu('menu-principal')">Voltar</button>
+</div>
+
+    <div id="menu-loja" class="menu hidden">
+    <button onclick="showMenu('menu-vender')">Vender</button>
+    <button onclick="showPurchaseModal('Poção de vida pequena', 20)">Poção de vida pequena - 20 ouro</button>
+    <button onclick="showPurchaseModal('Osso', 10)">Osso - 10 ouro</button>
+    <button onclick="showPurchaseModal('Porrete de madeira', 5, '30-60', 'Arma')">Porrete de madeira - 5 ouro (Ataque: 30-60)</button>
+    <button onclick="showPurchaseModal('Espada de madeira', 100, '3-4', 'Arma')">Espada de madeira - 100 ouro (Ataque: 3-4)</button>
+    <button onclick="showPurchaseModal('Queijo', 10)">Queijo - 10 ouro</button>
+    <button onclick="showPurchaseModal('Elmo de couro', 30, '2', 'Elmo')">Elmo de couro - 30 ouro (Defesa: 2)</button>
+    <button onclick="showPurchaseModal('Armadura de couro', 50, '4', 'Armadura')">Armadura de couro - 50 ouro (Defesa: 4)</button>
+    <button onclick="showPurchaseModal('Calça de couro', 40, '3', 'Calça')">Calça de couro - 40 ouro (Defesa: 3)</button>
+    <button onclick="showPurchaseModal('Botas de couro', 20, '2', 'Bota')">Botas de couro - 20 ouro (Defesa: 2)</button>
+		<button onclick="showPurchaseModal('Vara de pesca', 100, '', 'Acessório de pesca')">Vara de pesca - 100 ouro</button>
+<button onclick="showPurchaseModal('Armadilha de lagosta', 500, '', 'Acessório de pesca')">Armadilha de lagosta - 500 ouro</button>
+<button onclick="showPurchaseModal('Arpão', 2000, '', 'Acessório de pesca')">Arpão - 2000 ouro</button>
+<button onclick="showPurchaseModal('Isca comum', 10)">Isca comum - 10 ouro</button>
+<button onclick="showPurchaseModal('Picareta de bronze', 100, '', 'Picareta')">Picareta de bronze - 100 ouro</button>
+<button onclick="showPurchaseModal('Picareta de ferro', 500, '', 'Picareta')">Picareta de ferro - 500 ouro</button>
+    <button onclick="showMenu('menu-principal')">Voltar</button>
+</div>
+
+    <!-- Venda de Itens -->
+<div id="menu-vender" class="menu hidden">
+    <div id="venda-inventory-grid" class="inventory-grid">
+        <!-- Itens para vender serão inseridos aqui via JavaScript -->
+    </div>
+    <button onclick="showMenu('menu-loja')">Voltar</button>
+</div>
+
+    <!-- Purchase Modal -->
+    <div id="purchase-modal" class="hidden">
+        <div id="purchase-modal-content">
+            <p id="purchase-item"></p>
+            <p>Preço: <span id="purchase-price"></span> ouro</p>
+            <p id="purchase-details" class="hidden"></p>
+            <label for="purchase-quantity">Quantidade:</label>
+            <input type="number" id="purchase-quantity" value="1" min="1">
+            <button onclick="confirmPurchase()">Comprar</button>
+            <button onclick="closePurchaseModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Venda Modal -->
+    <div id="venda-modal" class="hidden">
+        <div id="venda-modal-content">
+            <p id="venda-item"></p>
+            <p>Preço de venda: <span id="venda-price"></span> ouro</p>
+            <label for="venda-quantity">Quantidade:</label>
+            <input type="number" id="venda-quantity" value="1" min="1">
+            <button onclick="confirmVenda()">Vender</button>
+            <button onclick="closeVendaModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="menu-inventario" class="menu hidden">
+        <div class="inventory-grid" id="inventory-grid">
+            <!-- Os itens do inventário serão inseridos aqui via JavaScript -->
+        </div>
+        <button onclick="showMenu('menu-principal')">Voltar</button>
+    </div>
+    
+    <!-- Menu Equipamentos -->
+    <div id="menu-equipamentos" class="menu hidden">
+        <div class="inventory-grid" id="equipamentos-grid">
+            <!-- Equipamentos equipados serão inseridos aqui via JavaScript -->
+        </div>
+        <button onclick="showMenu('menu-principal')">Voltar</button>
+    </div>
+		
+		<div id="menu-banco" class="menu hidden">
+    <button onclick="showBankModal('depositar')">Depositar Ouro</button>
+    <button onclick="showBankModal('retirar')">Retirar Ouro</button>
+    <button onclick="showMenu('menu-principal')">Voltar</button>
+</div>
+    
+    <div id="menu-meus-status" class="menu hidden">
+    <p>Dano: <span id="dano">1</span></p>
+    <p>Armadura: <span id="armadura-status">0</span></p>
+    <button onclick="showMenu('menu-principal')">Voltar</button>
+</div>
+
+    <!-- Modal -->
+    <div id="modal">
+        <div id="modal-content">
+            <p id="modal-message"></p>
+            <button onclick="closeModal()">Ok</button>
+        </div>
+    </div>
+
+    <!-- Item Modal -->
+    <div id="item-modal">
+        <div id="item-modal-content">
+            <p id="item-modal-message"></p>
+            <button id="item-discard" onclick="discardItem()">Descartar</button>
+            <button id="item-use" class="disabled" onclick="useItem()">Usar</button>
+            <button onclick="closeItemModal()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="delete-modal">
+        <div id="delete-modal-content">
+            <p>Tem certeza que deseja deletar o perfil?</p>
+            <button onclick="confirmDelete(true)">Sim</button>
+            <button onclick="confirmDelete(false)">Não</button>
+        </div>
+    </div>
+		
+		<!-- Discard Modal -->
+<div id="discard-modal" class="hidden">
+    <div id="discard-modal-content">
+        <p>Seu inventário está cheio. Selecione itens para descartar e quais novos itens deseja adicionar:</p>
+        <div id="discard-inventory-grid" class="inventory-grid">
+            <!-- Itens para descartar serão inseridos aqui via JavaScript -->
+        </div>
+        <p>Novos Itens:</p>
+        <div id="new-items-grid" class="inventory-grid">
+            <!-- Novos itens a serem adicionados serão inseridos aqui via JavaScript -->
+        </div>
+        <button onclick="confirmDiscard()">Confirmar</button>
+        <button onclick="closeDiscardModal()">Cancelar</button>
+    </div>
+</div>
+		
+		<!-- Bank Modal -->
+<div id="bank-modal" class="hidden">
+    <div id="bank-modal-content">
+        <p id="bank-modal-message"></p>
+        <label for="bank-quantity">Quantidade:</label>
+        <input type="number" id="bank-quantity" value="1" min="1">
+        <button id="bank-confirm" onclick="confirmBankAction()">Confirmar</button>
+        <button onclick="closeBankModal()">Cancelar</button>
+    </div>
+</div>
+
+<!-- Fishing Modal -->
+<div id="fishing-modal" class="hidden">
+    <div id="fishing-modal-content">
+        <p id="fishing-message">Tentando pescar...</p>
+        <div id="fishing-info">
+            <p>Nível de Pesca: <span id="fishing-skill-level">0</span></p>
+            <p>Iscas: <span id="bait-count">0</span></p>
+        </div>
+        <button onclick="cancelFishing()" id="cancel-fishing-button">Cancelar</button>
+    </div>
+</div>
+
+<!-- Mining Modal -->
+<div id="mining-modal" class="hidden">
+    <div id="mining-modal-content">
+        <p id="mining-message">Tentando minerar...</p>
+        <div id="mining-info">
+            <p>Nível de Mineração: <span id="mining-skill-level">0</span></p>
+            <p>Picareta equipada: <span id="equipped-pickaxe">Nenhuma</span></p>
+        </div>
+        <button onclick="cancelMining()" id="cancel-mining-button">Cancelar</button>
+    </div>
+</div>
+
+    <!-- Battle Modal -->
+    <div id="battle-modal">
+        <div id="battle-modal-content">
+            <p id="battle-message"></p>
+            <p id="battle-health"></p>
+            <button onclick="fleeBattle()">Fugir</button>
+        </div>
+    </div>
+
+    <!-- Função JavaScript para alternar menus -->
+    <script>
+        let currentHealth = 100;
+        let maxHealth = 100;
+        let currentCreature = '';
+        let creatureHealth = 0;
+        let creatureMaxHealth = 0;
+        let creatureMinDamage = 0;
+        let creatureMaxDamage = 0;
+        let battleInterval = null;
+        let gold = 0;
+        let bones = 0;
+        let healthPotions = 0;
+        let selectedItem = '';
+        let profile = null;
+        let profileToDelete = '';
+        let vendaItem = '';
+        let vendaPrice = 0;
+        let equippedItem = null;
+				let bankGold = 0;
+				let bankAction = '';
+				
+				const creatures = {
+    rato: {
+        health: 30,
+        minDamage: 0,
+        maxDamage: 3,
+        loot: {
+            gold: { min: 1000, max: 10000 },
+            items: [
+                { name: 'osso', chance: 100 },
+                { name: 'poção de vida', chance: 70 },
+								{ name: 'queijo', chance: 70 }
+            ]
+        }
+    },
+    morcego: {
+        health: 60,
+        minDamage: 0,
+        maxDamage: 4,
+        loot: {
+            gold: { min: 0, max: 7 },
+            items: [
+                { name: 'osso', chance: 20 },
+                { name: 'poção de vida', chance: 50 }
+            ]
+        }
+    },
+    aranha: {
+        health: 70,
+        minDamage: 0,
+        maxDamage: 5,
+        loot: {
+            gold: { min: 0, max: 10 },
+            items: [
+                { name: 'poção de vida', chance: 50 }
+            ]
+        }
+    },
+    troll: {
+        health: 100,
+        minDamage: 0,
+        maxDamage: 7,
+        loot: {
+            gold: { min: 0, max: 25 },
+            items: [
+                { name: 'osso', chance: 100 },
+                { name: 'poção de vida', chance: 80 }
+            ]
+        }
+    },
+    orc: {
+        health: 120,
+        minDamage: 0,
+        maxDamage: 9,
+        loot: {
+            gold: { min: 0, max: 40 },
+            items: [
+                { name: 'osso', chance: 100 },
+                { name: 'poção de vida', chance: 80 }
+            ]
+        }
+    },
+    minotauro: {
+        health: 150,
+        minDamage: 0,
+        maxDamage: 10,
+        loot: {
+            gold: { min: 0, max: 50 },
+            items: [
+                { name: 'osso', chance: 100 },
+                { name: 'poção de vida', chance: 85 },
+                { name: 'porrete de madeira', chance: 30 }
+            ]
+        }
+    }
+};
+
+        function showMenu(menuId) {
+    const menus = document.querySelectorAll('.menu');
+    menus.forEach(menu => menu.classList.add('hidden'));
+    const selectedMenu = document.getElementById(menuId);
+    selectedMenu.classList.remove('hidden');
+
+    if (menuId === 'menu-inventario') {
+        updateInventory();
+    } else if (menuId === 'menu-login') {
+        updateProfileList();
+    } else if (menuId === 'menu-principal' && profile) {
+        updateProfileInfo();
+    } else if (menuId === 'menu-vender') {
+        updateVendaInventory();
+    }
+}
+
+        function createProfile() {
+    const profileName = document.getElementById('new-profile-name').value;
+    if (profileName) {
+        profile = {
+            name: profileName,
+            health: maxHealth,
+            gold: 10,
+            bones: 0,
+            healthPotions: 1,
+            cheese: 0,
+            isca: 0,
+            fish: [],
+            skills: {
+                ataque: { level: 0, exp: 0 },
+                defesa: { level: 0, exp: 0 },
+                pesca: { level: 0, exp: 0 },
+                mineracao: { level: 0, exp: 0 } // Adiciona skill de mineração
+            },
+            equipments: [],
+            equippedItemIndex: null,
+            cheeseEffectEndTime: null,
+            inventoryCapacity: 20
+        };
+        localStorage.setItem(profileName, JSON.stringify(profile));
+        loadProfile(profileName);
+        showMenu('menu-principal');
+    } else {
+        alert('Por favor, insira um nome para o perfil.');
+    }
+}
+
+        function login(profileName) {
+    if (profileName && localStorage.getItem(profileName)) {
+        loadProfile(profileName); // Carrega o perfil existente
+        showMenu('menu-principal'); // Mostra o menu principal
+    } else {
+        alert('Perfil não encontrado.');
+    }
+}
+        function saveProfile() {
+    if (profile && profile.name) {
+        const profileData = { ...profile, bankGold };
+        localStorage.setItem(profile.name, JSON.stringify(profileData));
+    } else {
+        console.error('Nenhum perfil ativo para salvar');
+    }
+}
+
+        function loadProfile(profileName) {
+    try {
+        const storedProfile = JSON.parse(localStorage.getItem(profileName));
+        if (storedProfile) {
+            profile = storedProfile;
+            bankGold = storedProfile.bankGold || 0;
+
+            if (!profile.skills) {
+                profile.skills = {
+                    ataque: { level: 0, exp: 0 },
+                    defesa: { level: 0, exp: 0 },
+                    pesca: { level: 0, exp: 0 } // Adiciona skill de pesca
+                };
+            } else {
+                if (!profile.skills.ataque) {
+                    profile.skills.ataque = { level: 0, exp: 0 };
+                }
+                if (!profile.skills.defesa) {
+                    profile.skills.defesa = { level: 0, exp: 0 }; // Adiciona skill de defesa
+                }
+                if (!profile.skills.pesca) {
+                    profile.skills.pesca = { level: 0, exp: 0 }; // Adiciona skill de pesca
+                }
+            }
+
+            document.getElementById('profile-info').style.display = 'flex';
+            document.getElementById('profile-name').innerText = `Perfil: ${profile.name}`;
+            document.getElementById('gold-amount').innerText = profile.gold;
+            updateHealthBar();
+            updateSkills();
+            updateInventory();
+            updateEquipamentos(); // Atualiza os equipamentos ao carregar o perfil
+
+            if (profile.equippedItemIndex !== null && profile.equipments[profile.equippedItemIndex]) {
+                equippedItem = profile.equippedItemIndex;
+                console.log(`Equipped item index set to: ${equippedItem}`);
+            } else {
+                equippedItem = null;
+                console.log('No item equipped');
+            }
+
+            updateMeusStatus(); // Atualiza o dano ao carregar o perfil
+
+            // Restaurar o efeito do queijo se estiver ativo
+            if (profile.cheeseEffectEndTime && new Date(profile.cheeseEffectEndTime) > new Date()) {
+                const remainingTime = Math.floor((new Date(profile.cheeseEffectEndTime) - new Date()) / 1000); // Arredondar para baixo para obter número inteiro
+                startCheeseEffect(remainingTime);
+            } else {
+                document.getElementById('cheese-status').style.display = 'none'; // Certifica-se que o status do queijo esteja oculto se não estiver ativo
+            }
+
+            updateProfileInfo(); // Atualiza a capacidade do inventário
+        } else {
+            console.error('Profile not found in localStorage');
+        }
+    } catch (e) {
+        console.error('Erro ao carregar o perfil:', profileName, e);
+    }
+}
+
+function getCurrentInventoryCount() {
+    let count = 0;
+    if (profile.gold > 0) count++;
+    if (profile.bones > 0) count++;
+    if (profile.healthPotions > 0) count++;
+    if (profile.cheese > 0) count++;
+    if (profile.isca > 0) count++;
+    if (profile.fish) count += profile.fish.length;
+    if (profile.equipments) count += profile.equipments.filter(equip => !equip.equipped).length;
+    if (profile.minerals) count += Object.keys(profile.minerals).length;
+    return count;
+}
+
+        function updateHealthBar() {
+    const healthBarInner = document.getElementById('health-bar-inner');
+    const healthText = document.getElementById('health-text');
+    const healthPercent = Math.floor((profile.health / maxHealth) * 100); // Usar apenas números inteiros
+    healthBarInner.style.width = `${healthPercent}%`;
+    healthText.innerText = `${profile.health}/${maxHealth}`;
+}
+
+        function updateProfileList() {
+    const profileList = document.getElementById('profile-list');
+    profileList.innerHTML = '';
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+            const profile = JSON.parse(localStorage.getItem(key));
+            if (profile && profile.name) {
+                const profileDiv = document.createElement('div');
+                profileDiv.innerText = profile.name;
+                profileDiv.style.display = 'flex';
+                profileDiv.style.justifyContent = 'space-between';
+                profileDiv.style.alignItems = 'center';
+
+                const loginButton = document.createElement('button');
+                loginButton.innerText = 'Entrar';
+                loginButton.onclick = () => login(profile.name);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.innerText = 'Deletar';
+                deleteButton.onclick = () => {
+                    profileToDelete = profile.name;
+                    document.getElementById('delete-modal').style.display = 'flex';
+                };
+
+                profileDiv.appendChild(loginButton);
+                profileDiv.appendChild(deleteButton);
+                profileList.appendChild(profileDiv);
+            }
+        } catch (e) {
+            console.error('Erro ao processar perfil:', key, e);
+        }
+    }
+}
+
+        function showCreature(creatureName) {
+    const creature = creatures[creatureName];
+    currentCreature = creatureName;
+    creatureHealth = creature.health;
+    creatureMaxHealth = creature.health;
+    creatureMinDamage = creature.minDamage;
+    creatureMaxDamage = creature.maxDamage;
+    showBattleModal();
+}
+
+        function showBattleModal() {
+            document.getElementById('battle-message').innerText = `Você está batalhando contra um ${currentCreature}`;
+            updateBattleHealth();
+            document.getElementById('battle-modal').style.display = 'flex';
+            startBattle();
+        }
+
+        function updateBattleHealth() {
+            document.getElementById('battle-health').innerText = `Sua vida: ${profile.health}/${maxHealth} | Vida do ${currentCreature}: ${creatureHealth}/${creatureMaxHealth}`;
+        }
+
+        let turn = 'player'; // Variável para controlar o turno
+        let battleActive = false; // Variável para controlar se a batalha está ativa
+
+        function startBattle() {
+    battleActive = true;
+    clearInterval(battleInterval); // Limpar o intervalo anterior, se existir
+    updateBattleHealth();
+    battleInterval = setInterval(() => {
+        if (!battleActive) {
+            clearInterval(battleInterval);
+            return;
+        }
+        if (turn === 'player') {
+            attackCreature();
+            turn = 'creature';
+        } else {
+            creatureAttack();
+            turn = 'player';
+        }
+        if (creatureHealth <= 0 || profile.health <= 0) {
+            clearInterval(battleInterval);
+            endBattle();
+        }
+    }, 1000);
+}
+
+        function attackCreature() {
+    const danoBase = profile.skills.ataque.level + 1; // Baseado no nível de ataque
+    let danoTotalMin = danoBase;
+    let danoTotalMax = danoBase;
+
+    // Adiciona o dano do item equipado
+    if (profile.equipments) {
+        profile.equipments.forEach(equip => {
+            if (equip.equipped && equip.classe === 'Arma') {
+                const [min, max] = equip.details.split('-').map(Number);
+                danoTotalMin += min;
+                danoTotalMax += max;
+            }
+        });
+    }
+
+    // Calcula o dano
+    const dano = Math.floor(Math.random() * (danoTotalMax - danoTotalMin + 1)) + danoTotalMin;
+
+    // Aplica o dano à criatura
+    if (creatureHealth > 0) {
+        creatureHealth -= dano;
+        updateBattleHealth();
+        gainExperience('ataque', dano); // Ganha experiência igual ao dano causado
+        if (creatureHealth <= 0) {
+            showVictoryMessage();
+        }
+    }
+}
+
+        function creatureAttack() {
+    if (profile.health > 0) {
+        const baseDamage = Math.floor(Math.random() * (creatureMaxDamage - creatureMinDamage + 1)) + creatureMinDamage;
+        const actualDamage = calculateDamageReceived(baseDamage);
+        profile.health -= actualDamage;
+        profile.health = Math.max(0, profile.health); // Garantir que a vida não seja negativa
+        gainExperience('defesa', actualDamage); // Ganha experiência na skill Defesa
+        updateHealthBar();
+        updateBattleHealth();
+        if (profile.health <= 0) {
+            showDefeatMessage();
+        }
+    }
+}
+
+        function updateMeusStatus() {
+    if (!profile || !profile.skills || !profile.skills.ataque || !profile.skills.defesa) {
+        console.error('Profile or skills not defined');
+        return;
+    }
+
+    const danoBase = profile.skills.ataque.level + 1;
+    let danoTotalMin = danoBase;
+    let danoTotalMax = danoBase;
+    let defesaTotal = profile.skills.defesa.level * 10;
+
+    profile.equipments.forEach(equip => {
+        if (equip.equipped) {
+            if (equip.classe === 'Arma') {
+                const [min, max] = equip.details.split('-').map(Number);
+                danoTotalMin += min;
+                danoTotalMax += max;
+            } else if (equip.classe === 'Elmo' || equip.classe === 'Armadura' || equip.classe === 'Calça' || equip.classe === 'Bota') {
+                defesaTotal += parseInt(equip.details, 10);
+            }
+        }
+    });
+
+    const danoElement = document.getElementById('dano');
+    if (danoElement) {
+        danoElement.innerText = `${danoTotalMin}-${danoTotalMax}`;
+    } else {
+        console.error('Dano element not found');
+    }
+
+    const armaduraElement = document.getElementById('armadura-status');
+    if (armaduraElement) {
+        armaduraElement.innerText = defesaTotal;
+    } else {
+        console.error('Armadura element not found');
+    }
+}
+
+function calculateDamageReceived(baseDamage) {
+    const armadura = profile.skills.defesa.level * 10;
+    const damageReductionPercent = Math.min(50, armadura / 2); // Cada 10 pontos de armadura reduzem 5% do dano, até um máximo de 50%
+    return Math.max(0, Math.floor(baseDamage * (1 - damageReductionPercent / 100)));
+}
+
+        function showVictoryMessage() {
+    battleActive = false;
+    const creature = creatures[currentCreature];
+    const lootGold = Math.floor(Math.random() * (creature.loot.gold.max - creature.loot.gold.min + 1)) + creature.loot.gold.min;
+    profile.gold += lootGold;
+    let lootMessage = `Você derrotou um ${currentCreature}! Você ganhou ${lootGold} moedas de ouro e os seguintes itens:\n`;
+    let newItems = [];
+
+    creature.loot.items.forEach(item => {
+        if (Math.random() * 100 < item.chance) {
+            switch (item.name) {
+                case 'osso':
+                    newItems.push({ name: 'Osso', quantity: 1 });
+                    lootMessage += `- Osso\n`;
+                    break;
+                case 'poção de vida':
+                    newItems.push({ name: 'Poção de vida pequena', quantity: 1 });
+                    lootMessage += `- Poção de vida pequena\n`;
+                    break;
+                case 'porrete de madeira':
+                    newItems.push({ name: 'Porrete de madeira', quantity: 1, details: '30-60', classe: 'Arma' });
+                    lootMessage += `- Porrete de madeira (Ataque: 30-60)\n`;
+                    break;
+                case 'espada de madeira':
+                    newItems.push({ name: 'Espada de madeira', quantity: 1, details: '3-4', classe: 'Arma' });
+                    lootMessage += `- Espada de madeira (Ataque: 3-4)\n`;
+                    break;
+                case 'elmo de couro':
+                    newItems.push({ name: 'Elmo de couro', quantity: 1, details: '2', classe: 'Elmo' });
+                    lootMessage += `- Elmo de couro (Defesa: 2)\n`;
+                    break;
+                case 'armadura de couro':
+                    newItems.push({ name: 'Armadura de couro', quantity: 1, details: '4', classe: 'Armadura' });
+                    lootMessage += `- Armadura de couro (Defesa: 4)\n`;
+                    break;
+                case 'calça de couro':
+                    newItems.push({ name: 'Calça de couro', quantity: 1, details: '3', classe: 'Calça' });
+                    lootMessage += `- Calça de couro (Defesa: 3)\n`;
+                    break;
+                case 'botas de couro':
+                    newItems.push({ name: 'Botas de couro', quantity: 1, details: '2', classe: 'Bota' });
+                    lootMessage += `- Botas de couro (Defesa: 2)\n`;
+                    break;
+                case 'queijo':
+                    newItems.push({ name: 'Queijo', quantity: 1 });
+                    lootMessage += `- Queijo\n`;
+                    break;
+            }
+        }
+    });
+
+    if (!canAddItemsToInventory(newItems)) {
+        showDiscardModal(newItems);
+        return;
+    }
+
+    newItems.forEach(item => addItemToInventory(item.name, item.quantity, item.details, item.classe));
+    saveProfile();
+    updateProfileInfo();
+    document.getElementById('modal-message').innerText = lootMessage;
+    document.getElementById('modal').style.display = 'flex';
+    document.getElementById('battle-modal').style.display = 'none';
+}
+
+function canAddItemsToInventory(newItems) {
+    const currentCount = getCurrentInventoryCount();
+    let additionalCount = 0;
+
+    newItems.forEach(item => {
+        if (item.name === 'Poção de vida pequena' && profile.healthPotions === 0) additionalCount++;
+        if (item.name === 'Osso' && profile.bones === 0) additionalCount++;
+        if (item.name === 'Queijo' && profile.cheese === 0) additionalCount++;
+        if (item.name === 'Isca comum' && profile.isca === 0) additionalCount++;
+        if (item.name === 'Peixe') additionalCount++;
+        if (item.classe) additionalCount++;
+    });
+
+    return (currentCount + additionalCount <= profile.inventoryCapacity);
+}
+
+function showDiscardModal(newItems) {
+    document.getElementById('battle-modal').style.display = 'none';
+    document.getElementById('discard-modal').style.display = 'flex';
+    const discardInventoryGrid = document.getElementById('discard-inventory-grid');
+    const newItemsGrid = document.getElementById('new-items-grid');
+    discardInventoryGrid.innerHTML = '';
+    newItemsGrid.innerHTML = '';
+
+    fillDiscardGrid(discardInventoryGrid, profile);
+    fillNewItemsGrid(newItemsGrid, newItems);
+
+    window.newItems = newItems;
+    window.selectedNewItems = [];
+}
+
+function fillDiscardGrid(discardInventoryGrid, profile) {
+    if (profile.gold > 0) {
+        discardInventoryGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleDiscardItem(this, 'gold')">
+                <img src="path-to-gold-icon.png" alt="Ouro" />
+                <p>Ouro</p>
+                <p>${profile.gold}</p>
+            </div>
+        `;
+    }
+    if (profile.bones > 0) {
+        discardInventoryGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleDiscardItem(this, 'bone')">
+                <img src="path-to-bone-icon.png" alt="Osso" />
+                <p>Osso</p>
+                <p>${profile.bones}</p>
+            </div>
+        `;
+    }
+    if (profile.healthPotions > 0) {
+        discardInventoryGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleDiscardItem(this, 'healthPotion')">
+                <img src="path-to-health-potion-icon.png" alt="Poção de Vida Pequena" />
+                <p>Poção de Vida Pequena</p>
+                <p>${profile.healthPotions}</p>
+            </div>
+        `;
+    }
+    if (profile.cheese > 0) {
+        discardInventoryGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleDiscardItem(this, 'cheese')">
+                <img src="path-to-cheese-icon.png" alt="Queijo" />
+                <p>Queijo</p>
+                <p>${profile.cheese}</p>
+            </div>
+        `;
+    }
+    if (profile.isca > 0) {
+        discardInventoryGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleDiscardItem(this, 'isca')">
+                <img src="path-to-isca-icon.png" alt="Isca Comum" />
+                <p>Isca Comum</p>
+                <p>${profile.isca}</p>
+            </div>
+        `;
+    }
+    if (profile.fish) {
+        profile.fish.forEach((fish, index) => {
+            discardInventoryGrid.innerHTML += `
+                <div class="inventory-item" onclick="toggleDiscardItem(this, 'fish', ${index})">
+                    <img src="path-to-fish-icon.png" alt="${fish.name}" />
+                    <p>${fish.name}</p>
+                    <p>Peso: ${fish.weight}g</p>
+                </div>
+            `;
+        });
+    }
+    if (profile.equipments) {
+        profile.equipments.forEach((equip, index) => {
+            if (!equip.equipped) {
+                let detailsText = '';
+                if (equip.classe === 'Arma') {
+                    const [min, max] = equip.details.split('-').map(Number);
+                    detailsText = `Ataque: ${min}-${max}`;
+                } else if (equip.classe === 'Elmo' || equip.classe === 'Armadura' || equip.classe === 'Calça' || equip.classe === 'Bota') {
+                    detailsText = `Defesa: ${equip.details}`;
+                } else if (equip.classe === 'Acessório de pesca') {
+                    detailsText = ''; // Acessórios de pesca não têm detalhes específicos para exibir
+                }
+                discardInventoryGrid.innerHTML += `
+                    <div class="inventory-item" onclick="toggleDiscardItem(this, 'equipment', ${index})">
+                        <img src="path-to-${equip.name.replace(' ', '-')}-icon.png" alt="${equip.name}" />
+                        <p>${equip.name}</p>
+                        <p>${detailsText}</p>
+                    </div>
+                `;
+            }
+        });
+    }
+    if (profile.minerals) {
+        Object.keys(profile.minerals).forEach(mineral => {
+            if (profile.minerals[mineral] > 0) {
+                discardInventoryGrid.innerHTML += `
+                    <div class="inventory-item" onclick="toggleDiscardItem(this, 'mineral', '${mineral}')">
+                        <img src="path-to-${mineral.replace(' ', '-')}-icon.png" alt="${mineral}" />
+                        <p>${mineral}</p>
+                        <p>${profile.minerals[mineral]}</p>
+                    </div>
+                `;
+            }
+        });
+    }
+}
+
+function fillNewItemsGrid(newItemsGrid, newItems) {
+    newItems.forEach((item, index) => {
+        newItemsGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleSelectNewItem(this, ${index})">
+                <img src="path-to-${item.name.replace(' ', '-')}-icon.png" alt="${item.name}" />
+                <p>${item.name}</p>
+                <p>${item.details || ''}</p>
+            </div>
+        `;
+    });
+}
+
+function toggleSelectNewItem(element, index) {
+    element.classList.toggle('selected');
+    if (!window.selectedNewItems) window.selectedNewItems = [];
+    const itemIndex = window.selectedNewItems.indexOf(index);
+    if (itemIndex > -1) {
+        window.selectedNewItems.splice(itemIndex, 1);
+    } else {
+        window.selectedNewItems.push(index);
+    }
+}
+
+function toggleDiscardItem(element, itemType, index) {
+    element.classList.toggle('selected');
+    if (!window.discardItems) window.discardItems = [];
+    const item = { type: itemType, index: index };
+    const itemIndex = window.discardItems.findIndex(i => i.type === itemType && i.index === index);
+    if (itemIndex > -1) {
+        window.discardItems.splice(itemIndex, 1);
+    } else {
+        window.discardItems.push(item);
+    }
+}
+
+function closeDiscardModal() {
+    document.getElementById('discard-modal').style.display = 'none';
+    window.discardItems = [];
+    window.selectedNewItems = [];
+    window.newItems = [];
+    updateProfileInfo(); // Atualiza a interface superior ao fechar o modal
+}
+
+function confirmDiscard() {
+    if (!window.discardItems) return;
+
+    window.discardItems.forEach(item => {
+        switch (item.type) {
+            case 'gold':
+                profile.gold = 0;
+                break;
+            case 'bone':
+                profile.bones = 0;
+                break;
+            case 'healthPotion':
+                profile.healthPotions = 0;
+                break;
+            case 'cheese':
+                profile.cheese = 0;
+                break;
+            case 'isca':
+                profile.isca = 0;
+                break;
+            case 'fish':
+                profile.fish.splice(item.index, 1);
+                break;
+            case 'equipment':
+                profile.equipments.splice(item.index, 1);
+                break;
+            case 'mineral':
+                if (profile.minerals[item.index] > 0) {
+                    profile.minerals[item.index] = 0;
+                }
+                break;
+        }
+    });
+
+    window.selectedNewItems.forEach(index => {
+        const item = window.newItems[index];
+        addItemToInventory(item.name, item.quantity || 1, item.details, item.classe);
+    });
+
+    saveProfile();
+    updateInventory();
+    updateProfileInfo(); // Atualiza a interface superior
+    closeDiscardModal();
+    document.getElementById('modal-message').innerText = 'Itens descartados e novos itens adicionados.';
+    document.getElementById('modal').style.display = 'flex';
+    document.getElementById('battle-modal').style.display = 'none';
+}
+
+        function showDefeatMessage() {
+    battleActive = false;
+    profile.health = maxHealth;
+    profile.gold = 0; // Perde todo o ouro em mãos ao morrer
+    saveProfile();
+    updateProfileInfo();
+    document.getElementById('modal-message').innerText = `Você foi derrotado por um ${currentCreature}. Você voltou ao menu inicial com a vida cheia e perdeu todo o seu ouro em mãos.`;
+    document.getElementById('modal').style.display = 'flex';
+    document.getElementById('battle-modal').style.display = 'none';
+}
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            showMenu('menu-batalhas');
+        }
+
+        function fleeBattle() {
+            battleActive = false;
+            clearInterval(battleInterval);
+            saveProfile();
+            document.getElementById('battle-modal').style.display = 'none';
+            showMenu('menu-batalhas');
+        }
+
+        function showItemModal(item) {
+    selectedItem = item;
+    document.getElementById('item-modal-message').innerText = `O que você quer fazer com ${item}?`;
+    if (item === 'gold') {
+        document.getElementById('item-use').classList.add('disabled');
+    } else if (item === 'healthPotion' || item === 'cheese') {
+        document.getElementById('item-use').classList.remove('disabled');
+    } else {
+        document.getElementById('item-use').classList.add('disabled');
+    }
+    document.getElementById('item-modal').style.display = 'flex';
+}
+
+        function closeItemModal() {
+            document.getElementById('item-modal').style.display = 'none';
+        }
+
+        function useItem() {
+    if (selectedItem === 'healthPotion' && profile.healthPotions > 0) {
+        profile.health = Math.min(profile.health + 30, maxHealth);
+        profile.healthPotions -= 1;
+        updateHealthBar();
+        updateInventory();
+        updateProfileInfo(); // Atualiza a interface superior
+        closeItemModal();
+    } else if (selectedItem === 'cheese' && profile.cheese > 0) {
+        profile.cheese -= 1;
+        startCheeseEffect(300); // 300 segundos
+        updateInventory();
+        updateProfileInfo(); // Atualiza a interface superior
+        closeItemModal();
+    }
+}
+
+let cheeseInterval = null;
+
+function startCheeseEffect(duration) {
+    const intervalTime = 5; // Intervalo de 5 segundos
+    let remainingTime = duration;
+
+    // Limpa o intervalo anterior se estiver em execução
+    if (cheeseInterval) {
+        clearInterval(cheeseInterval);
+    }
+
+    profile.cheeseEffectEndTime = new Date(new Date().getTime() + remainingTime * 1000).toISOString();
+    saveProfile();
+
+    cheeseInterval = setInterval(() => {
+        if (remainingTime <= 0) {
+            clearInterval(cheeseInterval);
+            profile.cheeseEffectEndTime = null;
+            saveProfile();
+            document.getElementById('cheese-status').style.display = 'none';
+        } else {
+            profile.health = Math.min(profile.health + 1, maxHealth);
+            updateHealthBar();
+            remainingTime -= intervalTime;
+            updateCheeseStatus(remainingTime);
+        }
+    }, intervalTime * 1000);
+
+    document.getElementById('cheese-status').style.display = 'block';
+    updateCheeseStatus(remainingTime);
+}
+
+function updateCheeseStatus(remainingTime) {
+    const cheeseStatusIcon = document.getElementById('cheese-status-icon');
+    if (cheeseStatusIcon) {
+        cheeseStatusIcon.title = `Alimentado ${Math.floor(remainingTime)} segundos`; // Usar Math.floor para garantir que é um número inteiro
+    }
+}
+
+        function discardItem() {
+    if (selectedItem === 'gold') {
+        profile.gold = 0;
+    } else if (selectedItem === 'bone') {
+        profile.bones = 0;
+    } else if (selectedItem === 'healthPotion') {
+        profile.healthPotions = 0;
+    } else if (selectedItem === 'cheese') {
+        profile.cheese = 0;
+    } else if (selectedItem === 'isca') {
+        profile.isca = 0;
+    }
+    saveProfile();
+    updateInventory();
+    updateProfileInfo(); // Atualiza a interface superior
+    closeItemModal();
+}
+
+        function updateInventory() {
+    const inventoryGrid = document.getElementById('inventory-grid');
+    inventoryGrid.innerHTML = '';
+
+    if (profile.gold > 0) {
+        inventoryGrid.innerHTML += `
+            <div onclick="showItemModal('gold')" class="inventory-item">
+                <img src="path-to-gold-icon.png" alt="Ouro" />
+                <p>Ouro</p>
+                <p>${profile.gold}</p>
+            </div>
+        `;
+    }
+    if (profile.bones > 0) {
+        inventoryGrid.innerHTML += `
+            <div onclick="showItemModal('bone')" class="inventory-item">
+                <img src="path-to-bone-icon.png" alt="Osso" />
+                <p>Osso</p>
+                <p>${profile.bones}</p>
+            </div>
+        `;
+    }
+    if (profile.healthPotions > 0) {
+        inventoryGrid.innerHTML += `
+            <div onclick="showItemModal('healthPotion')" class="inventory-item">
+                <img src="path-to-health-potion-icon.png" alt="Poção de Vida Pequena" />
+                <p>Poção de Vida Pequena</p>
+                <p>${profile.healthPotions}</p>
+            </div>
+        `;
+    }
+    if (profile.cheese > 0) {
+        inventoryGrid.innerHTML += `
+            <div onclick="showItemModal('cheese')" class="inventory-item">
+                <img src="path-to-cheese-icon.png" alt="Queijo" />
+                <p>Queijo</p>
+                <p>${profile.cheese}</p>
+            </div>
+        `;
+    }
+    if (profile.isca > 0) {
+        inventoryGrid.innerHTML += `
+            <div onclick="showItemModal('isca')" class="inventory-item">
+                <img src="path-to-isca-icon.png" alt="Isca Comum" />
+                <p>Isca Comum</p>
+                <p>${profile.isca}</p>
+            </div>
+        `;
+    }
+    if (profile.fish) {
+        profile.fish.forEach((fish, index) => {
+            inventoryGrid.innerHTML += `
+                <div class="inventory-item">
+                    <img src="path-to-fish-icon.png" alt="${fish.name}" />
+                    <p>${fish.name}</p>
+                    <p>Peso: ${fish.weight}g</p>
+                    <button onclick="showVendaModal('Peixe', ${fish.weight}, ${index})">Vender</button>
+                </div>
+            `;
+        });
+    }
+    if (profile.equipments) {
+        profile.equipments.forEach((equip, index) => {
+            if (!equip.equipped) {
+                let detailsText = '';
+                if (equip.classe === 'Arma') {
+                    const [min, max] = equip.details.split('-').map(Number);
+                    detailsText = `Ataque: ${min}-${max}`;
+                } else if (equip.classe === 'Elmo' || equip.classe === 'Armadura' || equip.classe === 'Calça' || equip.classe === 'Bota') {
+                    detailsText = `Defesa: ${equip.details}`;
+                } else if (equip.classe === 'Acessório de pesca') {
+                    detailsText = ''; // Acessórios de pesca não têm detalhes específicos para exibir
+                }
+                inventoryGrid.innerHTML += `
+                    <div class="inventory-item">
+                        <img src="path-to-${equip.name.replace(' ', '-')}-icon.png" alt="${equip.name}" />
+                        <p>${equip.name}</p>
+                        <p>${detailsText}</p>
+                        <button onclick="equipItem(${index})">Equipar</button>
+                    </div>
+                `;
+            }
+        });
+    }
+    if (profile.minerals) {
+        Object.keys(profile.minerals).forEach(mineral => {
+            if (profile.minerals[mineral] > 0) {
+                inventoryGrid.innerHTML += `
+                    <div class="inventory-item">
+                        <img src="path-to-${mineral.replace(' ', '-')}-icon.png" alt="${mineral}" />
+                        <p>${mineral}</p>
+                        <p>${profile.minerals[mineral]}</p>
+                        <button onclick="showVendaModal('${mineral}', ${getMineralSellPrice(mineral)})">Vender</button>
+                    </div>
+                `;
+            }
+        });
+    }
+}
+
+function showBankModal(action) {
+    bankAction = action;
+    const message = action === 'depositar' ? 'Quantos ouros você quer depositar? (10% de taxa será aplicada)' : 'Quantos ouros você quer retirar?';
+    document.getElementById('bank-modal-message').innerText = message;
+    document.getElementById('bank-quantity').value = 1;
+    document.getElementById('bank-modal').style.display = 'flex';
+}
+
+function confirmBankAction() {
+    const quantity = parseInt(document.getElementById('bank-quantity').value);
+    if (bankAction === 'depositar') {
+        const tax = Math.ceil(quantity * 0.1); // Calcula 10% de taxa, arredondando para cima
+        const finalDeposit = quantity - tax; // Quantia final a ser depositada
+
+        if (profile.gold >= quantity) {
+            profile.gold -= quantity; // Deduz a quantidade total do jogador
+            bankGold += finalDeposit; // Adiciona a quantidade final (menos a taxa) ao banco
+            alert(`Você depositou ${quantity} ouro. Após uma taxa de ${tax} ouro, ${finalDeposit} ouro foi depositado no banco.`);
+        } else {
+            alert('Você não tem ouro suficiente para cobrir o depósito.');
+        }
+    } else if (bankAction === 'retirar') {
+        if (bankGold >= quantity) {
+            profile.gold += quantity;
+            bankGold -= quantity;
+        } else {
+            alert('O banco não tem ouro suficiente.');
+        }
+    }
+    saveProfile();
+    updateProfileInfo();
+    closeBankModal();
+}
+
+function closeBankModal() {
+    document.getElementById('bank-modal').style.display = 'none';
+}
+
+let fishingInterval = null;
+let isFishing = false;
+
+function showFishingModal(fish) {
+    if (profile.skills.pesca.level < fish.level) {
+        alert(`Você precisa de nível ${fish.level} de pesca para pescar este peixe.`);
+        return;
+    }
+
+    const requiredEquipmentEquipped = profile.equipments.some(equip => equip.equipped && equip.name === fish.requiredEquipment);
+    if (!requiredEquipmentEquipped) {
+        alert(`Você precisa equipar um ${fish.requiredEquipment} para pescar este peixe.`);
+        return;
+    }
+
+    if (profile.isca <= 0) {
+        alert('Você não tem iscas suficientes.');
+        return;
+    }
+
+    document.getElementById('fishing-message').innerText = `Pescando ${fish.name}...`;
+    document.getElementById('fishing-skill-level').innerText = profile.skills.pesca.level;
+    document.getElementById('bait-count').innerText = profile.isca;
+    document.getElementById('fishing-modal').style.display = 'flex';
+    startFishing(fish);
+}
+
+function startFishing(fish) {
+    isFishing = true;
+    fishingInterval = setInterval(() => {
+        if (!isFishing) return; // Se não estiver pescando, saia da função
+
+        if (profile.isca <= 0) {
+            cancelFishing();
+            document.getElementById('fishing-message').innerText = 'Você ficou sem iscas.';
+            return;
+        }
+        profile.isca -= 1;
+        gainExperience('pesca', 1); // Ganha 1 ponto de skill ao usar isca
+        if (Math.random() < 0.7) {
+            const fishWeight = calculateFishWeight(fish);
+            const newFish = { name: fish.name, weight: fishWeight };
+
+            if (!canAddItemsToInventory([newFish])) {
+                showDiscardModalForFish(newFish);
+                return;
+            }
+
+            profile.fish = (profile.fish || []).concat(newFish);
+            gainExperience('pesca', fish.skillPoints); // Ganha pontos de skill ao pescar
+            document.getElementById('fishing-message').innerText = `Você pescou um ${fish.name} com ${fishWeight}g!`;
+						updateProfileInfo(); // Atualiza a interface superior
+        } else {
+            document.getElementById('fishing-message').innerText = `Tentando pescar ${fish.name}...`;
+        }
+        document.getElementById('bait-count').innerText = profile.isca;
+        saveProfile();
+    }, 5000 + Math.random() * 5000); // Intervalo entre 5 e 10 segundos
+}
+
+function showDiscardModalForFish(newFish) {
+    clearInterval(fishingInterval); // Para a pesca
+    isFishing = false; // Define a pesca como parada
+
+    document.getElementById('fishing-modal').style.display = 'none';
+    document.getElementById('discard-modal').style.display = 'flex';
+    const discardInventoryGrid = document.getElementById('discard-inventory-grid');
+    const newItemsGrid = document.getElementById('new-items-grid');
+    discardInventoryGrid.innerHTML = '';
+    newItemsGrid.innerHTML = '';
+
+    fillDiscardGrid(discardInventoryGrid, profile);
+    fillNewItemsGridForFish(newItemsGrid, [newFish]);
+
+    window.newItems = [newFish];
+    window.selectedNewItems = [];
+}
+
+function fillNewItemsGridForFish(newItemsGrid, newItems) {
+    newItems.forEach((item, index) => {
+        newItemsGrid.innerHTML += `
+            <div class="inventory-item" onclick="toggleSelectNewItem(this, ${index})">
+                <img src="path-to-fish-icon.png" alt="${item.name}" />
+                <p>${item.name}</p>
+                <p>Peso: ${item.weight}g</p>
+            </div>
+        `;
+    });
+}
+
+function cancelFishing() {
+    clearInterval(fishingInterval);
+    isFishing = false;
+    document.getElementById('fishing-modal').style.display = 'none';
+}
+
+function calculateFishWeight(fish) {
+    const { min, max } = fish.weightRange;
+    const isHeavy = Math.random() < (fish.weightProbability / 100);
+    if (isHeavy) {
+        return max;
+    } else {
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
+}
+
+const fishes = {
+    lambari: { 
+        name: 'Lambari', 
+        level: 0, 
+        skillPoints: 10, 
+        requiredEquipment: 'Vara de pesca',
+        weightRange: { min: 10, max: 50 },
+        weightProbability: 0.1 // 1% chance de ser pesado
+    },
+    bagre: { 
+        name: 'Bagre', 
+        level: 3, 
+        skillPoints: 40, 
+        requiredEquipment: 'Vara de pesca',
+        weightRange: { min: 100, max: 500 },
+        weightProbability: 0.1
+    },
+    truta: { 
+        name: 'Truta', 
+        level: 5, 
+        skillPoints: 100, 
+        requiredEquipment: 'Vara de pesca',
+        weightRange: { min: 200, max: 800 },
+        weightProbability: 0.1
+    },
+    lagosta: { 
+        name: 'Lagosta', 
+        level: 8, 
+        skillPoints: 400, 
+        requiredEquipment: 'Armadilha de lagosta',
+        weightRange: { min: 300, max: 1000 },
+        weightProbability: 0.1
+    },
+    salmao: { 
+        name: 'Salmão', 
+        level: 10, 
+        skillPoints: 900, 
+        requiredEquipment: 'Vara de pesca',
+        weightRange: { min: 500, max: 1500 },
+        weightProbability: 0.1
+    },
+    peixeEspada: { 
+        name: 'Peixe Espada', 
+        level: 13, 
+        skillPoints: 1500, 
+        requiredEquipment: 'Arpão',
+        weightRange: { min: 1000, max: 3000 },
+        weightProbability: 0.1
+    },
+    tubarao: { 
+        name: 'Tubarão', 
+        level: 15, 
+        skillPoints: 3000, 
+        requiredEquipment: 'Arpão',
+        weightRange: { min: 1500, max: 5000 },
+        weightProbability: 0.1
+    }
+};
+
+const minerals = {
+    veioDeCobre: { name: 'Veio de Cobre', level: 0, skillPoints: 15, value: 15 },
+    veioDeLatao: { name: 'Veio de Latão', level: 0, skillPoints: 15, value: 15 },
+    veioDeCobalto: { name: 'Veio de Cobalto', level: 2, skillPoints: 20, value: 20 },
+    veioDeFerro: { name: 'Veio de Ferro', level: 5, skillPoints: 35, value: 35 },
+    veioDePrata: { name: 'Veio de Prata', level: 7, skillPoints: 40, value: 40 },
+    veioDeCarvao: { name: 'Veio de Carvão', level: 8, skillPoints: 50, value: 50 },
+    veioDeOuro: { name: 'Veio de Ouro', level: 10, skillPoints: 65, value: 65 },
+    veioDeGranito: { name: 'Veio de Granito', level: 12, skillPoints: 75, value: 75 },
+    veioDeMithril: { name: 'Veio de Mithril', level: 15, skillPoints: 80, value: 80 },
+    veioDeLunarita: { name: 'Veio de Lunarita', level: 18, skillPoints: 90, value: 90 },
+    veioDeAdamantita: { name: 'Veio de Adamantita', level: 20, skillPoints: 100, value: 100 },
+    veioDeRunita: { name: 'Veio de Runita', level: 25, skillPoints: 125, value: 125 },
+    veioDeSolarita: { name: 'Veio de Solarita', level: 30, skillPoints: 150, value: 150 }
+};
+
+function getMineralSellPrice(mineral) {
+    const prices = {
+        'Veio de Cobre': 15,
+        'Veio de Latão': 15,
+        'Veio de Cobalto': 20,
+        'Veio de Ferro': 35,
+        'Veio de Prata': 40,
+        'Veio de Carvão': 50,
+        'Veio de Ouro': 65,
+        'Veio de Granito': 75,
+        'Veio de Mithril': 80,
+        'Veio de Lunarita': 90,
+        'Veio de Adamantita': 100,
+        'Veio de Runita': 125,
+        'Veio de Solarita': 150
+    };
+    return prices[mineral] || 0;
+}
+
+let isMining = false;
+let miningInterval = null;
+
+function showMiningModal(mineral) {
+    if (profile.skills.mineracao.level < mineral.level) {
+        alert(`Você precisa de nível ${mineral.level} de mineração para minerar este minério.`);
+        return;
+    }
+
+    const equippedPickaxe = profile.equipments.find(equip => equip.equipped && equip.classe === 'Picareta');
+    if (!equippedPickaxe) {
+        alert('Você precisa equipar uma picareta para minerar.');
+        return;
+    }
+
+    document.getElementById('mining-message').innerText = `Minerando ${mineral.name}...`;
+    document.getElementById('mining-skill-level').innerText = profile.skills.mineracao.level;
+    document.getElementById('equipped-pickaxe').innerText = equippedPickaxe ? equippedPickaxe.name : 'Nenhuma';
+    document.getElementById('mining-modal').style.display = 'flex';  // Exibe o modal de mineração
+    startMining(mineral);
+}
+
+function startMining(mineral) {
+    isMining = true;
+    miningInterval = setInterval(() => {
+        if (!isMining) return; // Se não estiver minerando, saia da função
+
+        if (Math.random() < 0.7) {
+            const quantity = 1; // Pode ajustar se quiser minerar mais de uma unidade por vez
+            const success = addItemToInventory(mineral.name, quantity);
+            if (success) {
+                gainExperience('mining', mineral.skillPoints); // Ganha pontos de skill de mineração
+                document.getElementById('mining-message').innerText = `Você minerou ${quantity} ${mineral.name}!`;
+                updateProfileInfo(); // Atualiza a capacidade do inventário imediatamente
+            } else {
+                document.getElementById('mining-message').innerText = `Você não tem espaço suficiente para minerar ${mineral.name}.`;
+            }
+        } else {
+            document.getElementById('mining-message').innerText = `Tentando minerar ${mineral.name}...`;
+        }
+        saveProfile();
+    }, 5000 + Math.random() * 10000); // Intervalo entre 5 e 15 segundos
+}
+
+function cancelMining() {
+    clearInterval(miningInterval);
+    isMining = false;
+    document.getElementById('mining-modal').style.display = 'none';
+}
+
+        function equipItem(index) {
+    const itemToEquip = profile.equipments[index];
+    const itemClass = itemToEquip.classe;
+
+    // Verificar se já há um item da mesma classe equipado
+    const alreadyEquipped = profile.equipments.some(equip => equip.equipped && equip.classe === itemClass);
+    if (alreadyEquipped) {
+        alert(`Você já tem um item da classe ${itemClass} equipado.`);
+        return;
+    }
+
+    // Desequipar item da mesma classe, se existir
+    profile.equipments.forEach(equip => {
+        if (equip.classe === itemClass) {
+            equip.equipped = false;
+        }
+    });
+
+    itemToEquip.equipped = true;
+    updateMeusStatus();
+    saveProfile();
+    updateInventory();
+    updateEquipamentos();
+		updateProfileInfo();
+}
+
+        function updateEquipamentos() {
+    const equipamentosGrid = document.getElementById('equipamentos-grid');
+    equipamentosGrid.innerHTML = '';
+    profile.equipments.forEach((equip, index) => {
+        if (equip.equipped) {
+            let detailsText = '';
+            if (equip.classe === 'Arma') {
+                const [min, max] = equip.details.split('-').map(Number);
+                detailsText = `Ataque: ${min}-${max}`;
+            } else if (equip.classe === 'Elmo' || equip.classe === 'Armadura' || equip.classe === 'Calça' || equip.classe === 'Bota') {
+                detailsText = `Defesa: ${equip.details}`;
+            } else {
+                detailsText = ''; // Acessórios de pesca e outros não têm detalhes específicos para exibir
+            }
+            equipamentosGrid.innerHTML += `
+                <div class="inventory-item">
+                    <img src="path-to-${equip.name.replace(' ', '-')}-icon.png" alt="${equip.name}" />
+                    <p>${equip.name}</p>
+                    <p>${detailsText}</p>
+                    <button onclick="desequiparItem(${index})">Desequipar</button>
+                </div>
+            `;
+        }
+    });
+    updateMeusStatus(); // Certifique-se de atualizar o status ao atualizar os equipamentos
+}
+        function desequiparItem(index) {
+    profile.equipments[index].equipped = false;
+    profile.equippedItemIndex = null; // Atualiza corretamente para indicar que não há item equipado
+    updateMeusStatus();
+    saveProfile();
+    updateInventory();
+    updateEquipamentos();
+		updateProfileInfo();
+}
+
+        function updateProfileInfo() {
+    document.getElementById('profile-name').innerText = `Perfil: ${profile.name}`;
+    document.getElementById('gold-amount').innerText = profile.gold;
+    document.getElementById('bank-gold-amount').innerText = bankGold; 
+    document.getElementById('inventory-capacity').innerText = `${getCurrentInventoryCount()}/${profile.inventoryCapacity}`; // Atualiza a capacidade do inventário
+    updateHealthBar();
+    updateMeusStatus(); // Atualiza o dano quando o nível da habilidade de ataque aumenta
+}
+
+        function confirmDelete(confirm) {
+            if (confirm) {
+                localStorage.removeItem(profileToDelete);
+                updateProfileList();
+            }
+            profileToDelete = '';
+            document.getElementById('delete-modal').style.display = 'none';
+        }
+        
+        let purchaseItem = '';
+        let purchasePrice = 0;
+        let purchaseDetails = '';
+
+        function showPurchaseModal(item, price, details = '', classe = '') {
+    purchaseItem = item;
+    purchasePrice = price;
+    purchaseDetails = details;
+    purchaseClass = classe;
+    document.getElementById('purchase-item').innerText = `Comprar ${item}`;
+    document.getElementById('purchase-price').innerText = price;
+    document.getElementById('purchase-details').innerText = details;
+    document.getElementById('purchase-details').style.display = details ? 'block' : 'none';
+    document.getElementById('purchase-quantity').value = 1;
+    document.getElementById('purchase-modal').style.display = 'flex';
+}
+
+        function closePurchaseModal() {
+            document.getElementById('purchase-modal').style.display = 'none';
+        }
+
+        function confirmPurchase() {
+    const quantity = parseInt(document.getElementById('purchase-quantity').value);
+    const totalCost = quantity * purchasePrice;
+    if (profile.gold >= totalCost) {
+        const isAccumulatedItem = purchaseItem === 'Poção de vida pequena' || purchaseItem === 'Osso' || purchaseItem === 'Queijo' || purchaseItem === 'Isca comum';
+        const currentCount = getCurrentInventoryCount();
+        let newItemsCount = isAccumulatedItem ? 0 : quantity;
+
+        if (isAccumulatedItem) {
+            if (purchaseItem === 'Poção de vida pequena' && profile.healthPotions === 0) newItemsCount = 1;
+            if (purchaseItem === 'Osso' && profile.bones === 0) newItemsCount = 1;
+            if (purchaseItem === 'Queijo' && profile.cheese === 0) newItemsCount = 1;
+            if (purchaseItem === 'Isca comum' && profile.isca === 0) newItemsCount = 1;
+        }
+
+        if (currentCount + newItemsCount <= profile.inventoryCapacity) {
+            profile.gold -= totalCost;
+            if (addItemToInventory(purchaseItem, quantity, purchaseDetails, purchaseClass)) {
+                saveProfile();
+                updateInventory();
+                updateProfileInfo();
+                closePurchaseModal();
+            }
+        } else {
+            alert('Você não tem espaço suficiente no inventário.');
+        }
+    } else {
+        alert('Você não tem ouro suficiente.');
+    }
+}
+
+        function addItemToInventory(item, quantity, details = '', classe = '') {
+    const currentCount = getCurrentInventoryCount();
+    let newItemsCount = 0;
+
+    if (item === 'Poção de vida pequena') {
+        newItemsCount = profile.healthPotions > 0 ? 0 : 1;
+        profile.healthPotions += quantity;
+    } else if (item === 'Osso') {
+        newItemsCount = profile.bones > 0 ? 0 : 1;
+        profile.bones += quantity;
+    } else if (item === 'Queijo') {
+        newItemsCount = profile.cheese > 0 ? 0 : 1;
+        profile.cheese = (profile.cheese || 0) + quantity;
+    } else if (item === 'Isca comum') {
+        newItemsCount = profile.isca > 0 ? 0 : 1;
+        profile.isca = (profile.isca || 0) + quantity;
+    } else if (item === 'Peixe') {
+        newItemsCount = 1;
+        profile.fish = (profile.fish || []).concat({ name: item, weight: details });
+    } else if (item === 'Porrete de madeira' || item === 'Espada de madeira' || item === 'Elmo de couro' || item === 'Armadura de couro' || item === 'Calça de couro' || item === 'Botas de couro' || item === 'Vara de pesca' || item === 'Armadilha de lagosta' || item === 'Arpão') {
+        newItemsCount = quantity;
+        if (!profile.equipments) {
+            profile.equipments = [];
+        }
+        for (let i = 0; i < quantity; i++) {
+            profile.equipments.push({ name: item, details: details, classe: classe, equipped: false });
+        }
+    } else {
+        // Para os minérios
+        newItemsCount = profile.minerals && profile.minerals[item] ? 0 : 1;
+        if (!profile.minerals) {
+            profile.minerals = {};
+        }
+        if (profile.minerals[item]) {
+            profile.minerals[item] += quantity;
+        } else {
+            profile.minerals[item] = quantity;
+        }
+    }
+
+    if (currentCount + newItemsCount > profile.inventoryCapacity) {
+        alert('Você não tem espaço suficiente no inventário.');
+        return false;
+    }
+
+    updateProfileInfo(); // Chama updateProfileInfo para atualizar a capacidade do inventário
+    return true;
+}
+
+        function showVendaModal(item, price, index) {
+    vendaItem = item;
+    vendaPrice = price;
+    vendaIndex = index;
+    document.getElementById('venda-item').innerText = `Vender ${item}`;
+    document.getElementById('venda-price').innerText = price;
+    document.getElementById('venda-quantity').value = 1;
+    document.getElementById('venda-modal').style.display = 'flex';
+}
+
+function closeVendaModal() {
+    document.getElementById('venda-modal').style.display = 'none';
+}
+
+        function confirmVenda() {
+    const quantity = parseInt(document.getElementById('venda-quantity').value);
+    const totalValue = quantity * vendaPrice;
+    if (removeItemFromInventory(vendaItem, quantity, vendaIndex)) {
+        profile.gold += totalValue;
+        saveProfile();
+        updateInventory();
+        updateProfileInfo(); // Atualiza a interface superior
+        updateVendaInventory();
+        closeVendaModal();
+    } else {
+        alert('Você não tem itens suficientes.');
+    }
+}
+
+        function removeItemFromInventory(item, quantity, index) {
+    if (item === 'Poção de vida pequena' && profile.healthPotions >= quantity) {
+        profile.healthPotions -= quantity;
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if (item === 'Osso' && profile.bones >= quantity) {
+        profile.bones -= quantity;
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if (item === 'Queijo' && profile.cheese >= quantity) {
+        profile.cheese -= quantity;
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if (item === 'Isca comum' && profile.isca >= quantity) {
+        profile.isca -= quantity;
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if (profile.minerals && profile.minerals[item] >= quantity) {
+        profile.minerals[item] -= quantity;
+        if (profile.minerals[item] <= 0) {
+            delete profile.minerals[item];
+        }
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if (item === 'Peixe' && profile.fish.length > index) {
+        profile.fish.splice(index, quantity);
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    } else if ((item === 'Porrete de madeira' || item === 'Espada de madeira' || item === 'Elmo de couro' || item === 'Armadura de couro' || item === 'Calça de couro' || item === 'Botas de couro' || item === 'Vara de pesca' || item === 'Armadilha de lagosta' || item === 'Arpão') && profile.equipments.length >= quantity) {
+        for (let i = 0; i < quantity; i++) {
+            const equipIndex = profile.equipments.findIndex(equip => equip.name === item && !equip.equipped);
+            if (equipIndex !== -1) {
+                profile.equipments.splice(equipIndex, 1);
+            } else {
+                return false;
+            }
+        }
+        updateProfileInfo(); // Atualiza a interface superior
+        return true;
+    }
+    return false;
+}
+
+        function updateVendaInventory() {
+    const vendaInventoryGrid = document.getElementById('venda-inventory-grid');
+    vendaInventoryGrid.innerHTML = '';
+    if (profile.bones > 0) {
+        vendaInventoryGrid.innerHTML += `
+            <div onclick="showVendaModal('Osso', 5)" class="inventory-item">
+                <img src="path-to-bone-icon.png" alt="Osso" />
+                <p>Osso</p>
+                <p>${profile.bones}</p>
+            </div>
+        `;
+    }
+    if (profile.healthPotions > 0) {
+        vendaInventoryGrid.innerHTML += `
+            <div onclick="showVendaModal('Poção de vida pequena', 10)" class="inventory-item">
+                <img src="path-to-health-potion-icon.png" alt="Poção de Vida Pequena" />
+                <p>Poção de Vida Pequena</p>
+                <p>${profile.healthPotions}</p>
+            </div>
+        `;
+    }
+    if (profile.cheese > 0) {
+        vendaInventoryGrid.innerHTML += `
+            <div onclick="showVendaModal('Queijo', 5)" class="inventory-item">
+                <img src="path-to-cheese-icon.png" alt="Queijo" />
+                <p>Queijo</p>
+                <p>${profile.cheese}</p>
+            </div>
+        `;
+    }
+    if (profile.isca > 0) {
+        vendaInventoryGrid.innerHTML += `
+            <div onclick="showVendaModal('Isca comum', 5)" class="inventory-item">
+                <img src="path-to-isca-icon.png" alt="Isca Comum" />
+                <p>Isca Comum</p>
+                <p>${profile.isca}</p>
+            </div>
+        `;
+    }
+    if (profile.fish) {
+        profile.fish.forEach((fish, index) => {
+            vendaInventoryGrid.innerHTML += `
+                <div onclick="showVendaModal('Peixe', ${fish.weight}, ${index})" class="inventory-item">
+                    <img src="path-to-fish-icon.png" alt="${fish.name}" />
+                    <p>${fish.name}</p>
+                    <p>Peso: ${fish.weight}g</p>
+                </div>
+            `;
+        });
+    }
+    profile.equipments.forEach((equip, index) => {
+        if (!equip.equipped) {
+            let sellPrice = 0;
+            switch (equip.name) {
+                case 'Porrete de madeira':
+                    sellPrice = 25;
+                    break;
+                case 'Espada de madeira':
+                    sellPrice = 50;
+                    break;
+                case 'Elmo de couro':
+                    sellPrice = 15;
+                    break;
+                case 'Armadura de couro':
+                    sellPrice = 25;
+                    break;
+                case 'Calça de couro':
+                    sellPrice = 20;
+                    break;
+                case 'Botas de couro':
+                    sellPrice = 10;
+                    break;
+                case 'Vara de pesca':
+                    sellPrice = 50;
+                    break;
+                case 'Armadilha de lagosta':
+                    sellPrice = 250;
+                    break;
+                case 'Arpão':
+                    sellPrice = 1000;
+                    break;
+            }
+            vendaInventoryGrid.innerHTML += `
+                <div onclick="showVendaModal('${equip.name}', ${sellPrice})" class="inventory-item">
+                    <img src="path-to-${equip.name.replace(' ', '-')}-icon.png" alt="${equip.name}" />
+                    <p>${equip.name}</p>
+                    <p>${equip.details}</p>
+                </div>
+            `;
+        }
+    });
+    if (profile.minerals) {
+        Object.keys(profile.minerals).forEach(mineral => {
+            if (profile.minerals[mineral] > 0) {
+                vendaInventoryGrid.innerHTML += `
+                    <div onclick="showVendaModal('${mineral}', ${getMineralSellPrice(mineral)})" class="inventory-item">
+                        <img src="path-to-${mineral.replace(' ', '-')}-icon.png" alt="${mineral}" />
+                        <p>${mineral}</p>
+                        <p>${profile.minerals[mineral]}</p>
+                    </div>
+                `;
+            }
+        });
+    }
+}
+
+        function showSkill(skillId) {
+            const skills = document.querySelectorAll('.skill');
+            skills.forEach(skill => skill.classList.add('hidden'));
+            const selectedSkill = document.getElementById(skillId);
+            selectedSkill.classList.remove('hidden');
+            updateSkills();
+        }
+
+        function updateSkills() {
+    if (!profile || !profile.skills) {
+        console.error('Profile or skills not defined');
+        return;
+    }
+
+    const ataqueSkill = profile.skills.ataque;
+    if (ataqueSkill) {
+        document.getElementById('ataque-level').innerText = ataqueSkill.level || 0;
+        document.getElementById('ataque-exp').innerText = ataqueSkill.exp || 0;
+        document.getElementById('ataque-exp-next').innerText = getExperienceForNextLevel(ataqueSkill.level || 0);
+    } else {
+        console.error('Ataque skill not defined');
+    }
+
+    const defesaSkill = profile.skills.defesa;
+    if (defesaSkill) {
+        document.getElementById('defesa-level').innerText = defesaSkill.level || 0;
+        document.getElementById('defesa-exp').innerText = defesaSkill.exp || 0;
+        document.getElementById('defesa-exp-next').innerText = getExperienceForNextLevel(defesaSkill.level || 0);
+    } else {
+        console.error('Defesa skill not defined');
+    }
+    
+    const pescaSkill = profile.skills.pesca;
+    if (pescaSkill) {
+        document.getElementById('pesca-level').innerText = pescaSkill.level || 0;
+        document.getElementById('pesca-exp').innerText = pescaSkill.exp || 0;
+        document.getElementById('pesca-exp-next').innerText = getExperienceForNextLevel(pescaSkill.level || 0);
+    } else {
+        console.error('Pesca skill not defined');
+    }
+    
+    const mineracaoSkill = profile.skills.mineracao;
+    if (mineracaoSkill) {
+        document.getElementById('mineracao-level').innerText = mineracaoSkill.level || 0;
+        document.getElementById('mineracao-exp').innerText = mineracaoSkill.exp || 0;
+        document.getElementById('mineracao-exp-next').innerText = getExperienceForNextLevel(mineracaoSkill.level || 0);
+    } else {
+        console.error('Mineração skill not defined');
+    }
+}
+
+        function gainExperience(skill, amount) {
+    profile.skills[skill].exp += amount;
+    const expNeeded = getExperienceForNextLevel(profile.skills[skill].level);
+    if (profile.skills[skill].exp >= expNeeded) {
+        profile.skills[skill].exp -= expNeeded;
+        profile.skills[skill].level += 1;
+    }
+    saveProfile();
+    updateSkills();
+    updateMeusStatus();
+}
+
+        function getExperienceForNextLevel(level) {
+    return 100 * Math.pow(2, level);
+}
+
+function logout() {
+    saveProfile();
+    showMenu('page-initial');
+    document.getElementById('profile-info').style.display = 'none';
+}
+    </script>
+</body>
+</html>
